@@ -102,7 +102,7 @@ describe('Backend API Tests', () => {
     it('POST /api/tags creates a tag', async () => {
       const res = await request(app)
         .post('/api/tags')
-        .send({ name: 'CI Teeg' });
+        .send({ name: 'CI Tag' });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.name).toBe('CI Tag');
