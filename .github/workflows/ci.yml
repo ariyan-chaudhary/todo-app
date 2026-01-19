@@ -104,5 +104,5 @@ jobs:
               cd ${{ secrets.SERVER_PATH }}
               git pull origin main
               cd backend
-              npm ci --production
+              npm ci --omit=dev
               pm2 restart myapp     # or pm2 reload if you go cluster mode later
