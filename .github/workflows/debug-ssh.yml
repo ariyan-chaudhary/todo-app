@@ -1,0 +1,19 @@
+name: Debug SSH
+
+on: workflow_dispatch   # manual trigger
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test SSH connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          debug: true               # ← enables verbose output!
+          script: |
+            whoami
+            pwd
+            echo "If you see this → connected successfully!"
