@@ -17,3 +17,12 @@ jobs:
             whoami
             pwd
             echo "If you see this → connected successfully!"
+      - name: Debug Key Format
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key.txt
+          if [ $(tail -c 1 /tmp/key.txt | wc -c) -eq 0 ]; then
+            echo "Key ends with newline: Yes"
+          else
+            echo "Key ends with newline: No (this is the problem!)"
+          fi
+          od -c /tmp/key.txt | tail -n 5  # Check last lines for \r or missing \n
