@@ -64,90 +64,63 @@ jobs:
           path: frontend/dist
           retention-days: 2
   deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      runs-on: ubuntu-latest
+      needs: build
+      # ← This is the key line!
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
   
-    steps:
-      - name: ⬇️ Download frontend build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend-dist
+      steps:
+        - name: ⬇️ Download frontend build artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: frontend-build
+            path: frontend-dist
   
-      - name: 📤 Copy frontend dist to server
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "frontend-dist/*"
-          target: "${{ secrets.SERVER_PATH }}/frontend/dist"
-          strip_components: 1
-  
-      - name: 🚀 Deploy to server
-        id: deploy-ssh  # ← Add id to reference outputs later
-        uses: appleboy/ssh-action@v1.2.4  # ← Update to latest version
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          capture_stdout: true  # ← Enables stdout capture (now supported)
-          debug: true  # ← Enables extra action debugging in logs
-          script: |
-            set -e
-  
-            echo "Debug: Starting deployment script"
-            export NVM_DIR="$HOME/.nvm"
-            echo "Debug: NVM_DIR = $NVM_DIR"
-  
-            if [ -s "$NVM_DIR/nvm.sh" ]; then
-              echo "Debug: Found nvm.sh - loading..."
-              . "$NVM_DIR/nvm.sh" || echo "Debug: nvm sourcing failed (continuing)"
-              echo "Debug: nvm.sh sourced"
-            else
-              echo "ERROR: nvm.sh not found - skipping switch"
-            fi
-  
-            echo "Debug: Available node versions:"
-            nvm ls || echo "Debug: nvm ls failed"
-  
-            echo "Debug: Trying nvm use 22..."
-            nvm use 22 || {
-              echo "Warning: nvm use 22 failed (installing?)"
-              nvm install 22 || echo "Debug: Install failed too"
-              nvm use 22
-            }
-  
-            echo "Debug: Current node:"
-            node -v || echo "Debug: node -v failed"
-            echo "Debug: Current npm:"
-            npm -v || echo "Debug: npm -v failed"
-  
-            echo "Debug: Current dir:"
-            pwd
-  
-            cd ${{ secrets.SERVER_PATH }} || { echo "ERROR: cd to path failed"; exit 1; }
-  
-            echo "Debug: Git status:"
-            git status
-  
-            echo "Debug: Fetching & resetting to main..."
-            git fetch origin
-            git checkout main --force
-            git reset --hard origin/main
-  
-            echo "Debug: Latest commit:"
-            git log -1 --pretty=format:"%h - %s - %cr"
-  
-            cd backend
-            echo "Debug: Running npm ci..."
-            npm ci --omit=dev
-  
-            echo "Debug: Restarting pm2..."
-            pm2 restart myapp || echo "Debug: pm2 restart failed"
-  
-            echo "Debug: Deployment done!"
-  
-      - name: 📜 Show deploy output (for debugging)
-        run: echo "${{ steps.deploy-ssh.outputs.stdout }}"
+        - name: 📤 Copy frontend dist to server
+          uses: appleboy/scp-action@v0.1.4
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            source: "frontend-dist/*"
+            target: "${{ secrets.SERVER_PATH }}/frontend/dist"
+            strip_components: 1
+            
+        - name: 🚀 Deploy to server
+          uses: appleboy/ssh-action@v1.0.3
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            script: |
+              # Explicitly set the path to include common Node/NVM locations
+              export NVM_DIR="$HOME/.nvm"
+              
+              # Load NVM (Force it)
+              if [ -f "$NVM_DIR/nvm.sh" ]; then
+                  source "$NVM_DIR/nvm.sh"
+              else
+                  echo "Critical Error: nvm.sh not found at $NVM_DIR/nvm.sh"
+                  exit 1
+              fi
+
+              # Use NVM to set the path
+              nvm use 22 || nvm install 22
+              
+              # Confirm environment before moving forward
+              echo "Using Node: $(node -v)"
+              echo "Using Path: $PATH"
+
+              # Navigate and execute
+              cd ${{ secrets.SERVER_PATH }} || { echo "Directory not found"; exit 1; }
+              
+              echo "Starting Git Reset..."
+              git fetch origin
+              git reset --hard origin/main
+              
+              echo "Installing dependencies..."
+              cd backend
+              npm ci --omit=dev
+              
+              echo "Restarting PM2..."
+              pm2 restart myapp     # or pm2 reload if you go cluster mode later
