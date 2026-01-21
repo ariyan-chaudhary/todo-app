@@ -1,7 +1,10 @@
 const request = require('supertest');
 const app = require('/app');
-
-
+// Clean up after all tests to prevent Jest hanging
+afterAll(async () => {
+  // Give PostHog time to flush any pending events
+  await new Promise(resolve => setTimeout(resolve, 100));
+});
 describe('Backend API Tests', () => {
   // ----------------------
   // Health / Root
