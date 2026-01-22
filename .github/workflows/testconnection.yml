@@ -6,6 +6,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug Secrets and Context
+        run: |
+          echo "Host: ${{ secrets.SERVER_HOST }}"
+          echo "User: ${{ secrets.SERVER_USER }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
       - name: Minimal SSH Test
         id: ssh
         uses: appleboy/ssh-action@v1.0.3  # Stick to this; v1.2.4 has similar behavior
