@@ -67,9 +67,18 @@ jobs:
       runs-on: ubuntu-latest
       needs: build
       #  This is the key line!
+
+
+      
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
   
       steps:
+        - name: Debug Secrets and Context
+          run: |
+            echo "Host: ${{ secrets.SERVER_HOST }}"
+            echo "User: ${{ secrets.SERVER_USER }}"
+            echo "Event: ${{ github.event_name }}"
+            echo "Ref: ${{ github.ref }}"
         - name: ⬇️ Download frontend build artifact
           uses: actions/download-artifact@v4
           with:
