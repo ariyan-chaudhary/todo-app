@@ -94,6 +94,7 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             debug: true 
             script: |
+              echo "Deploy attempt at $(date)" >> ~/deploy_debug.log
               # Explicitly set the path to include common Node/NVM locations
               export NVM_DIR="$HOME/.nvm"
               
