@@ -1,0 +1,28 @@
+name: Test SSH Connection
+on:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Minimal SSH Test
+        id: ssh
+        uses: appleboy/ssh-action@v1.0.3  # Stick to this; v1.2.4 has similar behavior
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          debug: true
+          request_pty: true  # For interactive-like shell
+          capture_stdout: true
+          script: |
+            #!/bin/bash
+            set -e  # Fail on any error
+            set -x  # Trace commands
+            echo "Test connection at $(date)" >> ~/ssh_test.log
+            whoami >> ~/ssh_test.log
+            pwd >> ~/ssh_test.log
+
+      - name: Show Output
+        run: echo "${{ steps.ssh.outputs.stdout }}"
