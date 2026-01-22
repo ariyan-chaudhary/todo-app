@@ -87,11 +87,12 @@ jobs:
             strip_components: 1
             
         - name: 🚀 Deploy to server
-          uses: appleboy/ssh-action@v1.0.3
+          uses: appleboy/ssh-action@v1.2.4
           with:
             host: ${{ secrets.SERVER_HOST }}
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
+            debug: true 
             script: |
               # Explicitly set the path to include common Node/NVM locations
               export NVM_DIR="$HOME/.nvm"
