@@ -92,10 +92,5 @@ jobs:
         
         - name: 🚀 Deploy to server (Native)
           run: |
-            ssh -o StrictHostKeyChecking=no $$   {{ secrets.SERVER_USER }}@   $${{ secrets.SERVER_HOST }} '
-              set -e
-              set -x
-              echo "Deploy test at $(date)" >> ~/deploy_debug.log
-              whoami >> ~/deploy_debug.log
-              pwd >> ~/deploy_debug.log
+            ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'set -e; set -x; echo "Deploy test at $(date)" >> ~/deploy_debug.log; whoami >> ~/deploy_debug.log; pwd >> ~/deploy_debug.log'
               
