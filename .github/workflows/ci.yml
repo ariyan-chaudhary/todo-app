@@ -66,7 +66,7 @@ jobs:
   deploy:
       runs-on: ubuntu-latest
       needs: build
-      # ← This is the key line!
+      #  This is the key line!
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
   
       steps:
@@ -87,14 +87,22 @@ jobs:
             strip_components: 1
             
         - name: 🚀 Deploy to server
-          uses: appleboy/ssh-action@v1.2.4
+          uses: appleboy/ssh-action@v1.0.3
           with:
             host: ${{ secrets.SERVER_HOST }}
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
-            debug: true 
             script: |
+              #!/bin/bash
+              set -e  # Exit on error
+              set -x  # Trace commands (for debug; remove later)
+              
+              # Source profiles for non-interactive shell
+              [ -f ~/.bashrc ] && source ~/.bashrc
+              [ -f ~/.profile ] && source ~/.profile
+              
               echo "Deploy attempt at $(date)" >> ~/deploy_debug.log
+              
               # Explicitly set the path to include common Node/NVM locations
               export NVM_DIR="$HOME/.nvm"
               
@@ -102,27 +110,30 @@ jobs:
               if [ -f "$NVM_DIR/nvm.sh" ]; then
                   source "$NVM_DIR/nvm.sh"
               else
-                  echo "Critical Error: nvm.sh not found at $NVM_DIR/nvm.sh"
+                  echo "Critical Error: nvm.sh not found at $NVM_DIR/nvm.sh" | tee -a ~/deploy_debug.log
                   exit 1
               fi
-
+              
               # Use NVM to set the path
               nvm use 22 || nvm install 22
               
-              # Confirm environment before moving forward
-              echo "Using Node: $(node -v)"
-              echo "Using Path: $PATH"
-
-              # Navigate and execute
-              cd ${{ secrets.SERVER_PATH }} || { echo "Directory not found"; exit 1; }
+              # Hardcode Node path as fallback (uses your exact version)
+              export PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"
               
-              echo "Starting Git Reset..."
+              # Confirm environment before moving forward
+              echo "Using Node: $(node -v)" | tee -a ~/deploy_debug.log
+              echo "Using Path: $PATH" | tee -a ~/deploy_debug.log
+              
+              # Navigate and execute
+              cd "${{ secrets.SERVER_PATH }}" || { echo "Directory not found" | tee -a ~/deploy_debug.log; exit 1; }
+              
+              echo "Starting Git Reset..." | tee -a ~/deploy_debug.log
               git fetch origin
               git reset --hard origin/main
               
-              echo "Installing dependencies..."
+              echo "Installing dependencies..." | tee -a ~/deploy_debug.log
               cd backend
               npm ci --omit=dev
               
-              echo "Restarting PM2..."
-              pm2 restart myapp     # or pm2 reload if you go cluster mode later
+              echo "Restarting PM2..." | tee -a ~/deploy_debug.log
+              pm2 restart myapp  # Adjust to your app name; or use 'pm2 reload myapp' for cluster mode
