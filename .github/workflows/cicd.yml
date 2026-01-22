@@ -84,13 +84,25 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             source: "frontend-dist/*"
             target: "${{ secrets.SERVER_PATH }}/frontend/dist"
-            strip_components: 
+            strip_components: 1
             
-        - uses: webfactory/ssh-agent@v0.9.0
+        - name: 🚀 Deploy to server
+          uses: appleboy/ssh-action@v1.0.3
           with:
-            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        
-        - name: 🚀 Deploy to server (Native)
-          run: |
-            ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'set -e; set -x; echo "Deploy test at $(date)" >> ~/deploy_debug.log; whoami >> ~/deploy_debug.log; pwd >> ~/deploy_debug.log'
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            script: |
+
+              set -e
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+              nvm use 22
+              node -v
+              npm -v 
               
+              cd ${{ secrets.SERVER_PATH }}
+              git pull origin main
+              cd backend
+              npm ci --omit=dev
+              pm2 restart myapp     # or pm2 reload if you go cluster mode later
