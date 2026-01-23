@@ -7,7 +7,8 @@ import posthog from 'posthog-js';
 import { PostHogProvider } from '@posthog/react';
 
 // Toggle analytics based on environment variable
-const ENABLE_ANALYTICS = import.meta.env.VITE_ENABLE_ANALYTICS === 'true';
+//const ENABLE_ANALYTICS = import.meta.env.VITE_ENABLE_ANALYTICS === 'true';
+const ENABLE_ANALYTICS = true;
 
 // Create mock PostHog client when disabled
 const mockPostHog = {
