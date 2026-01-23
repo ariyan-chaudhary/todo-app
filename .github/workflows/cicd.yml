@@ -85,15 +85,17 @@ jobs:
             du -sh frontend-dist || true
 
 
-        - name: Rsync frontend to server
-          uses: burnett01/rsync-deployments@7.0.1
+        - name: 📤 Copy frontend dist to server
+          uses: appleboy/scp-action@v0.1.4
           with:
-            switches: -avzr --delete --checksum --rsync-path=/usr/bin/rsync
-            path: frontend-dist/
-            remote_path: ${{ secrets.SERVER_PATH }}/frontend/dist/
-            remote_host: ${{ secrets.SERVER_HOST }}
-            remote_user: ${{ secrets.SERVER_USER }}
-            remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            debug: true
+            source: "frontend-dist/**"
+            target: "${{ secrets.SERVER_PATH }}/frontend/dist"
+            strip_components: 1
+            overwrite: true
 
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
