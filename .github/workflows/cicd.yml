@@ -83,7 +83,8 @@ jobs:
             find frontend-dist -type f | sort   # full list of files
             echo "Total size:"
             du -sh frontend-dist || true
-
+            ls -la frontend-dist/
+            cat frontend-dist/index.html  # Or check a file's content/timestamp
 
         - name: 📤 Copy frontend dist to server
           uses: appleboy/scp-action@v0.1.4
@@ -92,11 +93,11 @@ jobs:
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             debug: true
-            request_pty: true
             source: "frontend-dist/**"
             target: "${{ secrets.SERVER_PATH }}/frontend/dist"
             strip_components: 1
             overwrite: true
+            rm: true
 
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
