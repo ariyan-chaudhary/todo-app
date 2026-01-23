@@ -86,6 +86,9 @@ jobs:
             target: "${{ secrets.SERVER_PATH }}/frontend/dist"
             strip_components: 1
             
+        - name: Setup tmate for debug
+          uses: mxschmitt/action-tmate@v3  # Simple, no extra config needed
+          
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
           with:
