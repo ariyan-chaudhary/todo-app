@@ -75,6 +75,14 @@ jobs:
           with:
             name: frontend-build
             path: frontend-dist
+            
+        - name: Debug artifact contents
+          run: |
+            pwd
+            ls -laR frontend-dist
+            find frontend-dist -type f | sort   # full list of files
+            echo "Total size:"
+            du -sh frontend-dist || true
 
         - name: 📤 Copy frontend dist to server
           uses: appleboy/scp-action@v0.1.4
