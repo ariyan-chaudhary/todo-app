@@ -92,6 +92,7 @@ jobs:
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             debug: true
+            request_pty: true
             source: "frontend-dist/**"
             target: "${{ secrets.SERVER_PATH }}/frontend/dist"
             strip_components: 1
