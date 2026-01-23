@@ -75,7 +75,7 @@ jobs:
           with:
             name: frontend-build
             path: frontend-dist
-            
+
         - name: Debug artifact contents
           run: |
             pwd
@@ -94,6 +94,7 @@ jobs:
             source: "frontend-dist/**"
             target: "${{ secrets.SERVER_PATH }}/frontend/dist"
             strip_components: 1
+            overwrite: true
     
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
