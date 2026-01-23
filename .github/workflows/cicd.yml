@@ -88,7 +88,7 @@ jobs:
         - name: Rsync frontend to server
           uses: burnett01/rsync-deployments@7.0.1
           with:
-            switches: -avzr --delete
+            switches: -avzr --delete --checksum --rsync-path=/usr/bin/rsync
             path: frontend-dist/
             remote_path: ${{ secrets.SERVER_PATH }}/frontend/dist/
             remote_host: ${{ secrets.SERVER_HOST }}
