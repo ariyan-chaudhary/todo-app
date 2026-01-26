@@ -119,29 +119,38 @@ jobs:
             request_pty: true
             envs: GH_TOKEN,REPO,ASSET_ID,SERVER_PATH
             script: |
+            
               set -e
               export NVM_DIR="$HOME/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
               nvm use 22
               node -v
               npm -v
-              
-              # Download the release asset via API (handles private repos)
-              API_URL="https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
+        
+              # ────────────────────────────────────────────────
+              # Use these directly (passed from workflow via env substitution)
+              API_URL="https://api.github.com/repos/${REPO}/releases/assets/${ASSET_ID}"
+              TARGET_DIR="${SERVER_PATH}/frontend/dist"
+        
+              echo "Downloading asset from: $API_URL"
+              echo "Target directory: $TARGET_DIR"
+        
               curl -L -o /tmp/dist.tar.gz \
-                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
                 -H "Accept: application/octet-stream" \
-                "$API_URL"
-              
-              # Unpack to target (overwrites existing)
-              mkdir -p $SERVER_PATH/frontend/dist
-              tar -xzf /tmp/dist.tar.gz -C $SERVER_PATH/frontend/dist
-              
-              # Cleanup
+                "$API_URL" || { echo "curl failed - check token/asset ID"; exit 1; }
+        
+              # Debug: show what was actually downloaded (size + first few bytes)
+              ls -l /tmp/dist.tar.gz
+              head -c 200 /tmp/dist.tar.gz | strings || true
+        
+              mkdir -p "$TARGET_DIR"
+              tar -xzf /tmp/dist.tar.gz -C "$TARGET_DIR"
+        
               rm /tmp/dist.tar.gz
-              
-              cd $SERVER_PATH
+        
+              cd "${SERVER_PATH}"
               git pull origin main
               cd backend
               npm ci --omit=dev
-              pm2 restart myapp # or pm2 reload if you go cluster mode later
+              pm2 restart myapp
