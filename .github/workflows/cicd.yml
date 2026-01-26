@@ -58,7 +58,8 @@ jobs:
       needs: build
       # ← This is the key line!
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
- 
+      permissions:
+        contents: write
       steps:
         - name: ⬇️ Download frontend build artifact
           uses: actions/download-artifact@v4
