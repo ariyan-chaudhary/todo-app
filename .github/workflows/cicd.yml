@@ -1,23 +1,18 @@
 name: CI - Build & Test
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 permissions:
   contents: read
   issues: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -26,23 +21,19 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-
       - name: 📦 Install frontend dependencies
         working-directory: frontend
-        run: npm ci 
-
+        run: npm ci
       - name: 🏗️ Build frontend
         working-directory: frontend
         run: npm run build
-      
+     
       - name: 📦 Install backend dependencies
         working-directory: backend
         run: npm ci
-
       - name: 🧪 Run backend tests
         working-directory: backend
         run: npm test
-
       - name: Create issue on failure
         if: failure() && github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
@@ -54,10 +45,9 @@ jobs:
               title: 'CI failed on main',
               body: `Run: ${context.runId}`
             })
-
       # Keep the build around so you can download it from Actions tab if something fails
       - name: 📤 Upload frontend build artifact
-        if: always() 
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
@@ -68,52 +58,89 @@ jobs:
       needs: build
       # ← This is the key line!
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  
+ 
       steps:
         - name: ⬇️ Download frontend build artifact
           uses: actions/download-artifact@v4
           with:
             name: frontend-build
             path: frontend-dist
-
         - name: Debug artifact contents
           run: |
             pwd
             ls -laR frontend-dist
-            find frontend-dist -type f | sort   # full list of files
+            find frontend-dist -type f | sort # full list of files
             echo "Total size:"
             du -sh frontend-dist || true
             ls -la frontend-dist/
-            cat frontend-dist/index.html  # Or check a file's content/timestamp
-
-        - name: 📤 Copy frontend dist to server
-          uses: appleboy/scp-action@v0.1.4
+            cat frontend-dist/index.html # Or check a file's content/timestamp
+        
+        # NEW: Create a tarball of the artifact (use tar for server compatibility; zip requires unzip which may not be present)
+        - name: 📦 Tar frontend dist
+          run: tar -czf dist.tar.gz -C frontend-dist .
+        
+        # NEW: Create a release (unique tag per run to avoid conflicts)
+        - name: Create Release
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ github.token }}
           with:
-            host: ${{ secrets.SERVER_HOST }}
-            username: ${{ secrets.SERVER_USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            source: "frontend-dist/*"
-            target: "${{ secrets.SERVER_PATH }}/frontend/dist"
-            strip_components: 1
-            
+            tag_name: deploy-${{ github.run_number }}
+            release_name: Deploy ${{ github.run_number }}
+            draft: false
+            prerelease: false
+        
+        # NEW: Upload the tarball as a release asset
+        - name: 📤 Upload Release Asset
+          id: upload_asset
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ github.token }}
+          with:
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: ./dist.tar.gz
+            asset_name: dist.tar.gz
+            asset_content_type: application/gzip
+        
+        # UPDATED: Remove SCP; use SSH to download/unpack on server (pass token/IDs securely; assumes curl/tar available)
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
+          env:
+            GH_TOKEN: ${{ github.token }}
+            REPO: ${{ github.repository }}
+            ASSET_ID: ${{ steps.upload_asset.outputs.id }}
+            SERVER_PATH: ${{ secrets.SERVER_PATH }}
           with:
             host: ${{ secrets.SERVER_HOST }}
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             request_pty: true
+            envs: GH_TOKEN,REPO,ASSET_ID,SERVER_PATH
             script: |
-
               set -e
               export NVM_DIR="$HOME/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
               nvm use 22
               node -v
-              npm -v 
+              npm -v
               
-              cd ${{ secrets.SERVER_PATH }}
+              # Download the release asset via API (handles private repos)
+              API_URL="https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
+              curl -L -o /tmp/dist.tar.gz \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/octet-stream" \
+                "$API_URL"
+              
+              # Unpack to target (overwrites existing)
+              mkdir -p $SERVER_PATH/frontend/dist
+              tar -xzf /tmp/dist.tar.gz -C $SERVER_PATH/frontend/dist
+              
+              # Cleanup
+              rm /tmp/dist.tar.gz
+              
+              cd $SERVER_PATH
               git pull origin main
               cd backend
               npm ci --omit=dev
-              pm2 restart myapp     # or pm2 reload if you go cluster mode later
+              pm2 restart myapp # or pm2 reload if you go cluster mode later
