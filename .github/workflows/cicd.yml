@@ -45,7 +45,7 @@ jobs:
               title: 'CI failed on main',
               body: `Run: ${context.runId}`
             })
-      # Keep the build around so you can download it from Actions tab if something fails
+      #download it from Actions tab if something fails
       - name: 📤 Upload frontend build artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,7 +56,7 @@ jobs:
   deploy:
       runs-on: ubuntu-latest
       needs: build
-      # ← This is the key line!
+      # This is the key line
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       permissions:
         contents: write
@@ -76,11 +76,9 @@ jobs:
             ls -la frontend-dist/
             cat frontend-dist/index.html # Or check a file's content/timestamp
         
-        # NEW: Create a tarball of the artifact (use tar for server compatibility; zip requires unzip which may not be present)
         - name: 📦 Tar frontend dist
           run: tar -czf dist.tar.gz -C frontend-dist .
         
-        # NEW: Create a release (unique tag per run to avoid conflicts)
         - name: Create Release
           id: create_release
           uses: actions/create-release@v1
@@ -92,7 +90,6 @@ jobs:
             draft: false
             prerelease: false
         
-        # NEW: Upload the tarball as a release asset
         - name: 📤 Upload Release Asset
           id: upload_asset
           uses: actions/upload-release-asset@v1
@@ -104,7 +101,6 @@ jobs:
             asset_name: dist.tar.gz
             asset_content_type: application/gzip
         
-        # UPDATED: Remove SCP; use SSH to download/unpack on server (pass token/IDs securely; assumes curl/tar available)
         - name: 🚀 Deploy to server
           uses: appleboy/ssh-action@v1.0.3
           env:
@@ -126,18 +122,17 @@ jobs:
               node -v
               npm -v
               
-              # Download directly via signed URL (substituted from workflow)
+              # Download directly via signed URL
               DOWNLOAD_URL="${{ steps.upload_asset.outputs.browser_download_url }}"
               TARGET_DIR="${{ secrets.SERVER_PATH }}/frontend/dist"
               
-              echo "Downloading asset from: $DOWNLOAD_URL"
-              echo "Target directory: $TARGET_DIR"
+              #echo "Downloading asset from: $DOWNLOAD_URL"
+              #echo "Target directory: $TARGET_DIR"
               
               curl -L -o /tmp/dist.tar.gz "$DOWNLOAD_URL" || { echo "curl failed - check URL"; exit 1; }
               
-              # Debug: show what was downloaded (size + first few bytes)
+              #show what was downloaded (size)
               ls -l /tmp/dist.tar.gz
-              head -c 200 /tmp/dist.tar.gz | strings || true
               
               mkdir -p "$TARGET_DIR"
               tar -xzf /tmp/dist.tar.gz -C "$TARGET_DIR"
@@ -149,3 +144,20 @@ jobs:
               cd backend
               npm ci --omit=dev
               pm2 restart myapp # or pm2 reload if you go cluster mode later
+              
+        - name: 🗑️ Delete Release
+          uses: actions/github-script@v7
+          with:
+            script: |
+              // Delete the release
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: ${{ steps.create_release.outputs.id }}
+              });
+              // Also delete the tag (avoid tag clutter)
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'tags/deploy-${{ github.run_number }}'
+              });
