@@ -14,13 +14,13 @@
     "@posthog/react": "^1.7.0",
     "lucide-react": "^0.563.0",
     "posthog-js": "^1.335.0",
-    "react": "^19.2.0",
+    "react": "^19.2.4",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.18",
-    "@types/react": "^19.2.9",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
